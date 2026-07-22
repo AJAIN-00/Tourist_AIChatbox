@@ -19,10 +19,11 @@
     <!-- Sights Table Card -->
     <div class="glass-card p-4 p-md-5" id="adminDashboardTableCard">
         <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;" id="adminPlacesTable">
+            <table class="table table-hover align-middle mb-0" style="background: transparent; color: var(--text-main);" id="adminPlacesTable">
                 <thead>
                     <tr class="text-muted" style="font-size: 0.85rem; text-transform: uppercase; border-color: var(--border);">
                         <th scope="col" style="padding: 1rem 0.5rem;" id="thID">ID</th>
+                        <th scope="col" style="padding: 1rem;" id="thImage">Image</th>
                         <th scope="col" style="padding: 1rem;" id="thName">Name</th>
                         <th scope="col" style="padding: 1rem;" id="thCity">City</th>
                         <th scope="col" style="padding: 1rem;" id="thSeason">Season</th>
@@ -34,6 +35,16 @@
                     {% for place in places %}
                     <tr style="border-color: var(--border);" id="rowPlace-{{ place.id }}">
                         <th scope="row" class="text-muted" style="padding: 1.25rem 0.5rem;">{{ place.id }}</th>
+                        <td style="padding: 1rem;">
+                            {% if place.image_url %}
+                                <img src="{{ place.image_url }}" alt="{{ place.name }}"
+                                     style="width:56px; height:56px; object-fit:cover; border-radius:10px; border:2px solid rgba(255,255,255,0.12);">
+                            {% else %}
+                                <div style="width:56px; height:56px; border-radius:10px; background:rgba(255,255,255,0.05); border:2px dashed rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.25); font-size:1.4rem;">
+                                    <i class="bi bi-camera"></i>
+                                </div>
+                            {% endif %}
+                        </td>
                         <td class="font-weight-bold text-white" style="padding: 1.25rem 1rem;">{{ place.name }}</td>
                         <td style="padding: 1.25rem 1rem;">
                             <span class="badge bg-secondary px-2.5 py-1.5">{{ place.city }}</span>
@@ -55,7 +66,7 @@
                     </tr>
                     {% else %}
                     <tr id="rowNoRecords">
-                        <td colspan="6" class="text-center py-5 text-muted">
+                        <td colspan="7" class="text-center py-5 text-muted">
                             <i class="bi bi-folder-x fs-1 mb-2"></i>
                             <p class="mb-0">No tourist sights records in the database.</p>
                         </td>

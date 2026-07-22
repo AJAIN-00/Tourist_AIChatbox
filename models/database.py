@@ -365,31 +365,50 @@ def add_place(data):
                 name, city, description, history, entry_fee, 
                 opening_time, closing_time, best_season, 
                 latitude, longitude, nearby_attractions, 
-                nearby_restaurants, nearby_hotels
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            data['name'], data['city'], data.get('description'), data.get('history'),
-            data.get('entry_fee'), data.get('opening_time'), data.get('closing_time'),
-            data.get('best_season'), data.get('latitude'), data.get('longitude'),
-            data.get('nearby_attractions'), data.get('nearby_restaurants'), data.get('nearby_hotels')
-        ))
-
-def update_place(place_id, data):
-    with get_db() as conn:
-        conn.execute('''
-            UPDATE places SET 
-                name = ?, city = ?, description = ?, history = ?, entry_fee = ?, 
-                opening_time = ?, closing_time = ?, best_season = ?, 
-                latitude = ?, longitude = ?, nearby_attractions = ?, 
-                nearby_restaurants = ?, nearby_hotels = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+                nearby_restaurants, nearby_hotels, image_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data['name'], data['city'], data.get('description'), data.get('history'),
             data.get('entry_fee'), data.get('opening_time'), data.get('closing_time'),
             data.get('best_season'), data.get('latitude'), data.get('longitude'),
             data.get('nearby_attractions'), data.get('nearby_restaurants'), data.get('nearby_hotels'),
-            place_id
+            data.get('image_url')
         ))
+
+def update_place(place_id, data):
+    with get_db() as conn:
+        # Build update query — only update image_url if a new one was provided (or explicitly cleared)
+        if data.get('image_url') is not None:
+            conn.execute('''
+                UPDATE places SET 
+                    name = ?, city = ?, description = ?, history = ?, entry_fee = ?, 
+                    opening_time = ?, closing_time = ?, best_season = ?, 
+                    latitude = ?, longitude = ?, nearby_attractions = ?, 
+                    nearby_restaurants = ?, nearby_hotels = ?, image_url = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (
+                data['name'], data['city'], data.get('description'), data.get('history'),
+                data.get('entry_fee'), data.get('opening_time'), data.get('closing_time'),
+                data.get('best_season'), data.get('latitude'), data.get('longitude'),
+                data.get('nearby_attractions'), data.get('nearby_restaurants'), data.get('nearby_hotels'),
+                data.get('image_url'), place_id
+            ))
+        else:
+            conn.execute('''
+                UPDATE places SET 
+                    name = ?, city = ?, description = ?, history = ?, entry_fee = ?, 
+                    opening_time = ?, closing_time = ?, best_season = ?, 
+                    latitude = ?, longitude = ?, nearby_attractions = ?, 
+                    nearby_restaurants = ?, nearby_hotels = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (
+                data['name'], data['city'], data.get('description'), data.get('history'),
+                data.get('entry_fee'), data.get('opening_time'), data.get('closing_time'),
+                data.get('best_season'), data.get('latitude'), data.get('longitude'),
+                data.get('nearby_attractions'), data.get('nearby_restaurants'), data.get('nearby_hotels'),
+                place_id
+            ))
 
 def delete_place(place_id):
     with get_db() as conn:

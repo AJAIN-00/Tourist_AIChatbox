@@ -3,6 +3,84 @@
 {% block title %}{{ action }} Attraction - Admin Panel{% endblock %}
 
 {% block content %}
+<style>
+  /* Image Upload Drop Zone */
+  .img-drop-zone {
+    border: 2px dashed rgba(255,255,255,0.2);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255,255,255,0.03);
+    position: relative;
+  }
+  .img-drop-zone:hover,
+  .img-drop-zone.dragover {
+    border-color: var(--primary, #6C63FF);
+    background: rgba(108, 99, 255, 0.08);
+  }
+  .img-drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .img-preview-wrap {
+    position: relative;
+    display: inline-block;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 100%;
+  }
+  .img-preview-wrap img {
+    max-height: 260px;
+    max-width: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    display: block;
+  }
+  .img-preview-wrap .remove-img-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(220,53,69,0.9);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  .img-preview-wrap .remove-img-btn:hover { background: rgba(220,53,69,1); }
+  .url-toggle-link {
+    font-size: 0.82rem;
+    color: var(--primary, #6C63FF);
+    cursor: pointer;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .current-image-badge {
+    font-size: 0.78rem;
+    background: rgba(40,167,69,0.15);
+    color: #4ade80;
+    border: 1px solid rgba(74,222,128,0.3);
+    border-radius: 6px;
+    padding: 2px 8px;
+    display: inline-block;
+    margin-left: 8px;
+  }
+</style>
+
 <div class="container py-5" id="adminPlaceFormPage">
     <div class="row align-items-center mb-4">
         <div class="col-12">
@@ -15,7 +93,7 @@
 
     <!-- Edit Form Card -->
     <div class="glass-card p-4 p-md-5" id="placeFormCard">
-        <form method="POST" id="placeRecordForm">
+        <form method="POST" enctype="multipart/form-data" id="placeRecordForm">
             <div class="row g-4">
                 
                 <!-- Place Name -->
@@ -33,7 +111,68 @@
                         <option value="Kanyakumari" {% if place and place.city == 'Kanyakumari' %}selected{% endif %}>Kanyakumari</option>
                     </select>
                 </div>
-                
+
+                <!-- ===================== IMAGE UPLOAD SECTION ===================== -->
+                <div class="col-12">
+                    <label class="form-label text-muted d-flex align-items-center gap-2" style="font-size: 0.85rem; text-transform: uppercase;">
+                        Place Image
+                        {% if place and place.image_url %}
+                            <span class="current-image-badge"><i class="bi bi-check-circle-fill"></i> Image set</span>
+                        {% endif %}
+                    </label>
+
+                    <!-- Drop Zone -->
+                    <div class="img-drop-zone" id="imgDropZone">
+                        <input type="file" id="imageFile" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                        
+                        <!-- Default placeholder (shown when no preview) -->
+                        <div id="dropPlaceholder">
+                            {% if place and place.image_url %}
+                                <!-- Show existing image -->
+                                <div class="img-preview-wrap" id="imgPreviewWrap">
+                                    <img src="{{ place.image_url }}" id="imgPreview" alt="Current image">
+                                    <button type="button" class="remove-img-btn" id="removeImgBtn" title="Remove image">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                                <p class="text-muted mt-2 mb-0" style="font-size: 0.82rem;">Click or drag a new image to replace</p>
+                            {% else %}
+                                <!-- Empty state -->
+                                <div id="emptyDropState">
+                                    <i class="bi bi-cloud-upload fs-1 text-muted mb-3 d-block"></i>
+                                    <p class="text-white mb-1" style="font-weight: 600;">Drag & drop an image here</p>
+                                    <p class="text-muted mb-0" style="font-size: 0.85rem;">or click to browse &nbsp;•&nbsp; PNG, JPG, GIF, WebP &nbsp;•&nbsp; Max 8 MB</p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- New preview (shown after file selected) -->
+                        <div id="newPreviewWrap" style="display:none;">
+                            <div class="img-preview-wrap">
+                                <img src="" id="newImgPreview" alt="New image preview">
+                                <button type="button" class="remove-img-btn" id="clearNewImgBtn" title="Clear selection">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                            <p class="text-muted mt-2 mb-0" style="font-size: 0.82rem;" id="selectedFileName">No file selected</p>
+                        </div>
+                    </div>
+
+                    <!-- URL fallback (optional) -->
+                    <div class="mt-2 d-flex align-items-center gap-2">
+                        <button type="button" class="url-toggle-link" id="toggleUrlInput">
+                            <i class="bi bi-link-45deg"></i> Use an image URL instead
+                        </button>
+                    </div>
+                    <div id="imageUrlWrap" style="display:none;" class="mt-2">
+                        <input type="url" class="form-control form-input-premium w-100" id="imageUrlInput" name="image_url"
+                               value="{{ place.image_url if place and place.image_url and not place.image_url.startswith('/static') else '' }}"
+                               placeholder="https://example.com/image.jpg">
+                        <small class="text-muted">Paste a direct image URL (used only if no file is uploaded)</small>
+                    </div>
+                </div>
+                <!-- ================================================================ -->
+
                 <!-- Description -->
                 <div class="col-12">
                     <label for="inputDesc" class="form-label text-muted" style="font-size: 0.85rem; text-transform: uppercase;">Description</label>
@@ -100,4 +239,106 @@
         </form>
     </div>
 </div>
+
+<script>
+(function () {
+    const fileInput   = document.getElementById('imageFile');
+    const dropZone    = document.getElementById('imgDropZone');
+    const newPreview  = document.getElementById('newPreviewWrap');
+    const newImg      = document.getElementById('newImgPreview');
+    const fileNameEl  = document.getElementById('selectedFileName');
+    const clearBtn    = document.getElementById('clearNewImgBtn');
+    const removeBtn   = document.getElementById('removeImgBtn');   // existing image remove
+    const toggleUrl   = document.getElementById('toggleUrlInput');
+    const urlWrap     = document.getElementById('imageUrlWrap');
+
+    // Show new image preview when file selected
+    fileInput.addEventListener('change', function () {
+        if (fileInput.files && fileInput.files[0]) {
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                newImg.src = e.target.result;
+                newPreview.style.display = 'block';
+                // Hide old placeholder/existing image
+                const emptyState = document.getElementById('emptyDropState');
+                const existingWrap = document.getElementById('imgPreviewWrap');
+                if (emptyState) emptyState.style.display = 'none';
+                if (existingWrap) existingWrap.style.display = 'none';
+                fileNameEl.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Clear newly selected file
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            fileInput.value = '';
+            newPreview.style.display = 'none';
+            const emptyState = document.getElementById('emptyDropState');
+            const existingWrap = document.getElementById('imgPreviewWrap');
+            if (emptyState) emptyState.style.display = 'block';
+            if (existingWrap) existingWrap.style.display = 'block';
+        });
+    }
+
+    // Remove existing image (sets hidden input to signal deletion)
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const existingWrap = document.getElementById('imgPreviewWrap');
+            if (existingWrap) existingWrap.style.display = 'none';
+            // Show empty state
+            const emptyState = document.getElementById('emptyDropState');
+            if (emptyState) { emptyState.style.display = 'block'; }
+            else {
+                const ph = document.createElement('div');
+                ph.id = 'emptyDropState';
+                ph.innerHTML = '<i class="bi bi-cloud-upload fs-1 text-muted mb-3 d-block"></i><p class="text-white mb-1" style="font-weight:600;">Drag & drop an image here</p><p class="text-muted mb-0" style="font-size:0.85rem;">or click to browse • PNG, JPG, GIF, WebP • Max 8 MB</p>';
+                document.getElementById('dropPlaceholder').appendChild(ph);
+            }
+            // Add hidden field to mark deletion
+            let del = document.getElementById('deleteImageFlag');
+            if (!del) {
+                del = document.createElement('input');
+                del.type = 'hidden';
+                del.name = 'delete_image';
+                del.id = 'deleteImageFlag';
+                del.value = '1';
+                document.getElementById('placeRecordForm').appendChild(del);
+            }
+        });
+    }
+
+    // Drag-and-drop effects
+    dropZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', function () {
+        dropZone.classList.remove('dragover');
+    });
+    dropZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+
+    // Toggle URL input
+    if (toggleUrl) {
+        toggleUrl.addEventListener('click', function () {
+            const hidden = urlWrap.style.display === 'none';
+            urlWrap.style.display = hidden ? 'block' : 'none';
+            toggleUrl.innerHTML = hidden
+                ? '<i class="bi bi-x-circle"></i> Hide URL input'
+                : '<i class="bi bi-link-45deg"></i> Use an image URL instead';
+        });
+    }
+})();
+</script>
 {% endblock %}

@@ -32,31 +32,34 @@
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* Light Mode Variables Override */
+/* ===================================================================
+   LIGHT MODE — Complete variable overrides + element-level fixes
+   =================================================================== */
 body.light-mode {
-    --bg-base: #f8fafc;
-    --bg-surface: rgba(255, 255, 255, 0.75);
-    --bg-surface-hover: rgba(241, 245, 249, 0.95);
-    --bg-card: rgba(255, 255, 255, 0.6);
+    --bg-base: #f0f4f8;
+    --bg-surface: rgba(255, 255, 255, 0.85);
+    --bg-surface-hover: rgba(241, 245, 249, 0.98);
+    --bg-card: rgba(255, 255, 255, 0.75);
     
     --primary: #d90429;
-    --primary-glow: rgba(217, 4, 41, 0.25);
-    --secondary: #e76f51;
+    --primary-glow: rgba(217, 4, 41, 0.2);
+    --secondary: #c05621;
     --accent: #0f9f90;
-    --accent-glow: rgba(15, 159, 144, 0.25);
+    --accent-glow: rgba(15, 159, 144, 0.2);
     
-    --border: rgba(15, 23, 42, 0.08);
-    --border-hover: rgba(15, 23, 42, 0.15);
+    --border: rgba(15, 23, 42, 0.10);
+    --border-hover: rgba(15, 23, 42, 0.18);
     --border-glow: rgba(219, 4, 41, 0.2);
     
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --text-highlight: #020617;
+    --text-main: #1e293b;
+    --text-muted: #475569;
+    --text-highlight: #0f172a;
     
-    --shadow-main: 0 8px 32px 0 rgba(148, 163, 184, 0.15);
+    --shadow-main: 0 4px 24px 0 rgba(148, 163, 184, 0.18);
 }
 
-/* Override Bootstrap text utilities for light mode compatibility */
+/* ---- General text utilities ---- */
+/* In light mode, any .text-white becomes dark-readable instead */
 body.light-mode .text-white {
     color: var(--text-highlight) !important;
 }
@@ -64,7 +67,202 @@ body.light-mode .text-muted {
     color: var(--text-muted) !important;
 }
 
-/* Global Styles */
+/* Inline style divs that hardcode color but don't use .text-white */
+body.light-mode .font-weight-bold {
+    color: var(--text-highlight);
+}
+
+/* Weather & emergency cards: JS-rendered h3 headings */
+body.light-mode .glass-card h3,
+body.light-mode .glass-card h2,
+body.light-mode .glass-card h4,
+body.light-mode .glass-card h5 {
+    color: var(--text-highlight) !important;
+}
+
+
+
+/* Headings inherit from CSS var */
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3,
+body.light-mode h4,
+body.light-mode h5,
+body.light-mode h6 {
+    color: var(--text-highlight) !important;
+}
+
+/* Paragraphs and body copy */
+body.light-mode p {
+    color: var(--text-main);
+}
+
+/* ---- Breadcrumb ---- */
+body.light-mode .breadcrumb-item a {
+    color: var(--secondary) !important;
+}
+body.light-mode .breadcrumb-item.active {
+    color: var(--text-muted) !important;
+}
+body.light-mode .breadcrumb-item + .breadcrumb-item::before {
+    color: var(--text-muted);
+}
+
+/* ---- Badge overrides ---- */
+body.light-mode .badge.bg-secondary {
+    background-color: #e2e8f0 !important;
+    color: #334155 !important;
+}
+
+/* ---- Admin Table (was table-dark) ---- */
+body.light-mode .table-dark {
+    --bs-table-bg: transparent !important;
+    --bs-table-color: var(--text-main) !important;
+    --bs-table-border-color: var(--border) !important;
+    --bs-table-hover-bg: rgba(0,0,0,0.04) !important;
+    --bs-table-striped-bg: rgba(0,0,0,0.02) !important;
+    color: var(--text-main) !important;
+    background: transparent !important;
+}
+body.light-mode .table-dark th,
+body.light-mode .table-dark td,
+body.light-mode .table-dark thead tr {
+    color: var(--text-main) !important;
+    border-color: var(--border) !important;
+}
+body.light-mode .table-dark thead tr {
+    color: var(--text-muted) !important;
+}
+
+/* ---- Buttons (navbar outline-light / outline-secondary) ---- */
+body.light-mode .btn-outline-light {
+    color: var(--text-highlight) !important;
+    border-color: var(--border-hover) !important;
+}
+body.light-mode .btn-outline-light:hover {
+    background: rgba(0,0,0,0.06) !important;
+    color: var(--text-highlight) !important;
+}
+body.light-mode .btn-outline-secondary {
+    color: var(--text-muted) !important;
+    border-color: var(--border-hover) !important;
+}
+body.light-mode .btn-outline-secondary:hover {
+    background: rgba(0,0,0,0.05) !important;
+    color: var(--text-highlight) !important;
+}
+
+/* ---- Alert messages ---- */
+body.light-mode .alert {
+    color: var(--text-main) !important;
+}
+
+/* ---- Card-specific text inside glass-card ---- */
+body.light-mode .glass-card {
+    background: var(--bg-card);
+    border-color: var(--border);
+    color: var(--text-main);
+}
+/* font-weight-bold text-white inside cards */
+body.light-mode .glass-card .font-weight-bold,
+body.light-mode .glass-card [class*="font-weight-bold"] {
+    color: var(--text-highlight) !important;
+}
+
+/* ---- Place card images: city badge ---- */
+body.light-mode .card-city-badge {
+    background: rgba(255,255,255,0.85);
+    color: #334155;
+    border-color: rgba(15,23,42,0.12);
+}
+
+/* ---- Chat bubbles ---- */
+body.light-mode .chat-bubble-bot {
+    background: rgba(0,0,0,0.04);
+    border-color: var(--border);
+    color: var(--text-main);
+}
+body.light-mode .chat-body {
+    background: rgba(241,245,249,0.5);
+}
+
+/* ---- Weather card text rendered via JS ---- */
+body.light-mode .weather-main-temp {
+    background: linear-gradient(135deg, var(--text-highlight) 0%, var(--primary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ---- Footer ---- */
+body.light-mode .footer-custom {
+    background: var(--bg-surface);
+    border-color: var(--border);
+}
+body.light-mode .footer-custom strong {
+    color: var(--text-highlight);
+}
+
+/* ---- Forms: select dropdowns and input placeholders ---- */
+body.light-mode .form-select,
+body.light-mode .form-control {
+    color: var(--text-main) !important;
+    background-color: rgba(255,255,255,0.9) !important;
+    border-color: var(--border-hover) !important;
+}
+body.light-mode .form-select option {
+    color: #1e293b;
+    background: #ffffff;
+}
+
+/* ---- Navbar toggler ---- */
+body.light-mode .navbar-toggler-icon {
+    filter: invert(1);
+}
+
+/* ---- Image upload drop zone in admin form ---- */
+body.light-mode .img-drop-zone {
+    border-color: rgba(15,23,42,0.18) !important;
+    background: rgba(0,0,0,0.02) !important;
+}
+body.light-mode .img-drop-zone p,
+body.light-mode .img-drop-zone .text-muted {
+    color: var(--text-muted) !important;
+}
+body.light-mode .img-drop-zone .text-white {
+    color: var(--text-highlight) !important;
+}
+body.light-mode .current-image-badge {
+    background: rgba(0,128,0,0.08);
+    color: #166534;
+    border-color: rgba(22,101,52,0.25);
+}
+
+/* ---- Place detail spec cards ---- */
+body.light-mode .glass-card .text-danger { color: #b91c1c !important; }
+body.light-mode .glass-card .text-warning { color: #92400e !important; }
+body.light-mode .glass-card .text-success { color: #166534 !important; }
+body.light-mode .glass-card .text-info   { color: #0c4a6e !important; }
+
+/* ---- Inline style overrides (border-top etc) ---- */
+body.light-mode .border-top {
+    border-color: var(--border) !important;
+}
+body.light-mode .border-bottom {
+    border-color: var(--border) !important;
+}
+
+/* ---- Table inside admin (row-level text) ---- */
+body.light-mode #adminPlacesTable th,
+body.light-mode #adminPlacesTable td {
+    color: var(--text-main) !important;
+}
+body.light-mode #adminPlacesTable thead th {
+    color: var(--text-muted) !important;
+}
+
+/* ===================================================================
+   Global Styles (both modes)
+   =================================================================== */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -179,7 +377,8 @@ a:hover {
     background: rgba(255, 255, 255, 0.05);
 }
 body.light-mode .nav-link-custom:hover, body.light-mode .nav-link-custom.active {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-highlight) !important;
 }
 
 /* Base Layout Containers */
@@ -207,7 +406,23 @@ main {
     box-shadow: 0 8px 30px var(--primary-glow);
 }
 
-/* Premium Buttons */
+/* Bootstrap Table: override with theme variables */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--text-main);
+    --bs-table-border-color: var(--border);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.04);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+    color: var(--text-main);
+}
+body.light-mode .table {
+    --bs-table-color: var(--text-main);
+    --bs-table-border-color: var(--border);
+    --bs-table-hover-bg: rgba(0, 0, 0, 0.03);
+    color: var(--text-main);
+}
+
+
 .btn-premium {
     background: linear-gradient(135deg, var(--primary) 0%, #b21e29 100%);
     color: #ffffff;
@@ -249,8 +464,14 @@ main {
     color: var(--secondary);
     transform: translateY(-2px);
 }
+body.light-mode .btn-premium-outline {
+    color: var(--text-main);
+    border-color: var(--border-hover);
+}
 body.light-mode .btn-premium-outline:hover {
-    background: rgba(0, 0, 0, 0.03);
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--primary);
+    border-color: var(--primary);
 }
 
 /* Form Styling */
@@ -270,10 +491,13 @@ body.light-mode .btn-premium-outline:hover {
     outline: none;
 }
 body.light-mode .form-input-premium {
-    background: rgba(0, 0, 0, 0.02);
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--border-hover);
+    color: var(--text-main);
 }
 body.light-mode .form-input-premium:focus {
-    background: rgba(0, 0, 0, 0.04);
+    background: #ffffff;
+    border-color: var(--primary);
 }
 
 /* Dark Mode Switch Knob */
@@ -295,6 +519,9 @@ body.light-mode .form-input-premium:focus {
     color: var(--secondary);
     background: rgba(255, 255, 255, 0.05);
 }
+body.light-mode .dark-mode-btn:hover {
+    background: rgba(0,0,0,0.05);
+}
 
 /* Chatbot Interface Styling */
 .chat-window {
@@ -311,6 +538,9 @@ body.light-mode .form-input-premium:focus {
     gap: 1rem;
     background: rgba(10, 15, 30, 0.2);
 }
+body.light-mode .chat-body {
+    background: rgba(241,245,249,0.5);
+}
 .chat-bubble {
     max-width: 75%;
     padding: 1rem 1.25rem;
@@ -325,6 +555,10 @@ body.light-mode .form-input-premium:focus {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border);
     border-bottom-left-radius: 4px;
+    color: var(--text-main);
+}
+body.light-mode .chat-bubble-bot {
+    background: rgba(0,0,0,0.04);
     color: var(--text-main);
 }
 .chat-bubble-user {
@@ -378,7 +612,8 @@ body.light-mode .form-input-premium:focus {
     margin-bottom: 8px;
 }
 body.light-mode .skeleton-line {
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.03) 25%, rgba(0, 0, 0, 0.08) 50%, rgba(0, 0, 0, 0.03) 75%);
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 25%, rgba(0, 0, 0, 0.09) 50%, rgba(0, 0, 0, 0.04) 75%);
+    background-size: 200% 100%;
 }
 
 /* Weather UI Cards */
@@ -505,9 +740,19 @@ body.light-mode .hero-headline {
     border-top: 1px solid var(--border);
     padding: 3rem 0;
     margin-top: 4rem;
+    color: var(--text-main);
+}
+.footer-custom h5 {
+    color: var(--text-highlight) !important;
+}
+.footer-custom strong {
+    color: var(--text-highlight);
+}
+.footer-custom .text-muted {
+    color: var(--text-muted) !important;
 }
 
-/* Animations */
+/* ---- Animations ---- */
 @keyframes slideUp {
     from {
         opacity: 0;

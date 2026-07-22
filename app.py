@@ -1,6 +1,7 @@
 import os
 import secrets
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 # Load env variables
@@ -8,6 +9,26 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(24))
+
+# Configure image upload folder
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8 MB max upload
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_uploaded_image(file):
+    """Save an uploaded image file and return its URL path, or None if invalid."""
+    if file and file.filename and allowed_file(file.filename):
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        unique_name = secrets.token_hex(12) + '.' + ext
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+        file.save(save_path)
+        return url_for('static', filename=f'uploads/{unique_name}')
+    return None
 
 # Import database and service functions
 from models.database import (
@@ -283,8 +304,18 @@ def admin_new_place():
             "longitude": float(request.form.get("longitude") or 0.0),
             "nearby_attractions": request.form.get("nearby_attractions", "").strip(),
             "nearby_restaurants": request.form.get("nearby_restaurants", "").strip(),
-            "nearby_hotels": request.form.get("nearby_hotels", "").strip()
+            "nearby_hotels": request.form.get("nearby_hotels", "").strip(),
+            "image_url": None
         }
+        
+        # Handle image upload
+        image_file = request.files.get("image")
+        uploaded_url = save_uploaded_image(image_file)
+        if uploaded_url:
+            data["image_url"] = uploaded_url
+        # Also accept a plain URL if no file was uploaded
+        elif request.form.get("image_url", "").strip():
+            data["image_url"] = request.form.get("image_url", "").strip()
         
         if not data["name"] or not data["city"]:
             flash("Place name and City are required.", "danger")
@@ -321,8 +352,19 @@ def admin_edit_place(place_id):
             "longitude": float(request.form.get("longitude") or 0.0),
             "nearby_attractions": request.form.get("nearby_attractions", "").strip(),
             "nearby_restaurants": request.form.get("nearby_restaurants", "").strip(),
-            "nearby_hotels": request.form.get("nearby_hotels", "").strip()
+            "nearby_hotels": request.form.get("nearby_hotels", "").strip(),
+            "image_url": None  # Will only update if new file provided
         }
+        
+        # Handle image upload — preserve old image if no new one provided
+        image_file = request.files.get("image")
+        uploaded_url = save_uploaded_image(image_file)
+        if uploaded_url:
+            data["image_url"] = uploaded_url
+        elif request.form.get("image_url", "").strip():
+            data["image_url"] = request.form.get("image_url", "").strip()
+        elif request.form.get("delete_image") == "1":
+            data["image_url"] = ""  # Explicit clear
         
         if not data["name"] or not data["city"]:
             flash("Place name and City are required.", "danger")
