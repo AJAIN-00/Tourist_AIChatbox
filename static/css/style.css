@@ -18,13 +18,13 @@
     --accent: #2a9d8f;          /* Teal for success states & weather success */
     --accent-glow: rgba(42, 157, 143, 0.3);
     
-    --border: rgba(255, 255, 255, 0.08);
-    --border-hover: rgba(255, 255, 255, 0.16);
-    --border-glow: rgba(230, 57, 70, 0.3);
+    --border: rgba(255, 255, 255, 0.12);
+    --border-hover: rgba(255, 255, 255, 0.22);
+    --border-glow: rgba(230, 57, 70, 0.4);
     
-    --text-main: #f1f5f9;
-    --text-muted: #94a3b8;
-    --text-highlight: #f8fafc;
+    --text-main: #f8fafc;        /* High-contrast off-white body text */
+    --text-muted: #cbd5e1;       /* High-contrast slate-silver for subtitles, muted elements & table headers */
+    --text-highlight: #ffffff;   /* Pure crisp white for headlines & bold titles */
     
     --glass-blur: 16px;
     --shadow-main: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
@@ -58,7 +58,14 @@ body.light-mode {
     --shadow-main: 0 4px 24px 0 rgba(148, 163, 184, 0.18);
 }
 
-/* ---- General text utilities ---- */
+/* ---- General text utilities & high-contrast overrides ---- */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+.text-white {
+    color: var(--text-highlight) !important;
+}
+
 /* In light mode, any .text-white becomes dark-readable instead */
 body.light-mode .text-white {
     color: var(--text-highlight) !important;
@@ -79,8 +86,6 @@ body.light-mode .glass-card h4,
 body.light-mode .glass-card h5 {
     color: var(--text-highlight) !important;
 }
-
-
 
 /* Headings inherit from CSS var */
 body.light-mode h1,
@@ -109,13 +114,38 @@ body.light-mode .breadcrumb-item + .breadcrumb-item::before {
 }
 
 /* ---- Badge overrides ---- */
+.badge.bg-secondary {
+    background-color: rgba(244, 162, 97, 0.2) !important;
+    color: #f4a261 !important;
+    border: 1px solid rgba(244, 162, 97, 0.35) !important;
+    font-weight: 600;
+}
 body.light-mode .badge.bg-secondary {
     background-color: #e2e8f0 !important;
     color: #334155 !important;
+    border: 1px solid rgba(15, 23, 42, 0.12) !important;
 }
 
-/* ---- Admin Table (was table-dark) ---- */
-body.light-mode .table-dark {
+/* ---- Table Styles ---- */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--text-main);
+    --bs-table-border-color: var(--border);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+    color: var(--text-main) !important;
+}
+.table th,
+.table td {
+    color: var(--text-main) !important;
+    border-color: var(--border) !important;
+}
+.table thead th,
+.table thead tr {
+    color: var(--text-muted) !important;
+}
+
+body.light-mode .table {
     --bs-table-bg: transparent !important;
     --bs-table-color: var(--text-main) !important;
     --bs-table-border-color: var(--border) !important;
@@ -124,14 +154,55 @@ body.light-mode .table-dark {
     color: var(--text-main) !important;
     background: transparent !important;
 }
-body.light-mode .table-dark th,
-body.light-mode .table-dark td,
-body.light-mode .table-dark thead tr {
+body.light-mode .table th,
+body.light-mode .table td {
     color: var(--text-main) !important;
     border-color: var(--border) !important;
 }
-body.light-mode .table-dark thead tr {
+body.light-mode .table thead th,
+body.light-mode .table thead tr {
     color: var(--text-muted) !important;
+}
+
+/* ---- Action Buttons (warning / danger) ---- */
+.btn-outline-warning {
+    color: #fbbf24 !important;
+    border-color: rgba(251, 191, 36, 0.6) !important;
+    background: rgba(251, 191, 36, 0.1) !important;
+    font-weight: 500;
+}
+.btn-outline-warning:hover {
+    background-color: #fbbf24 !important;
+    color: #0f172a !important;
+}
+.btn-outline-danger {
+    color: #f87171 !important;
+    border-color: rgba(248, 113, 113, 0.6) !important;
+    background: rgba(248, 113, 113, 0.1) !important;
+    font-weight: 500;
+}
+.btn-outline-danger:hover {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+}
+
+body.light-mode .btn-outline-warning {
+    color: #b45309 !important;
+    border-color: rgba(180, 83, 9, 0.5) !important;
+    background: rgba(180, 83, 9, 0.06) !important;
+}
+body.light-mode .btn-outline-warning:hover {
+    background-color: #b45309 !important;
+    color: #ffffff !important;
+}
+body.light-mode .btn-outline-danger {
+    color: #b91c1c !important;
+    border-color: rgba(185, 28, 28, 0.5) !important;
+    background: rgba(185, 28, 28, 0.06) !important;
+}
+body.light-mode .btn-outline-danger:hover {
+    background-color: #b91c1c !important;
+    color: #ffffff !important;
 }
 
 /* ---- Buttons (navbar outline-light / outline-secondary) ---- */
