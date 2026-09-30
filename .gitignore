@@ -18,9 +18,17 @@ ENV/
 
 # Environment variables — NEVER commit secrets
 .env
+.env.*
+!.env.example
 
-# Database file — contains user data
+# Database file — contains user data and hashed credentials
 tourism.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploaded user files — potentially sensitive content
+static/uploads/
 
 # IDE / OS files
 .vscode/
@@ -35,6 +43,10 @@ desktop.ini
 # Flask instance folder
 instance/
 
-# Distribution
+# Distribution / archives
 *.zip
 *.tar.gz
+
+# Security scanning output
+bandit-report.*
+pip-audit-report.*

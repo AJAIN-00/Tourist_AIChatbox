@@ -184,16 +184,26 @@ function initChatbot() {
     }
 }
 
+/**
+ * Safely append a chat message, escaping all text and rendering newlines as <br>.
+ * This prevents XSS from LLM responses or user input being injected into the DOM.
+ */
 function appendChatMessage(sender, text) {
     const chatMessages = document.getElementById("chatMessages");
     if (!chatMessages) return;
-    
+
     const bubble = document.createElement("div");
     bubble.className = `chat-bubble chat-bubble-${sender}`;
-    
-    // Convert newlines to breaks for readable layouts
-    bubble.innerHTML = text.replace(/\n/g, "<br>");
-    
+
+    // Split on newlines and insert text nodes + <br> elements to avoid innerHTML XSS
+    const lines = String(text).split("\n");
+    lines.forEach((line, idx) => {
+        bubble.appendChild(document.createTextNode(line));
+        if (idx < lines.length - 1) {
+            bubble.appendChild(document.createElement("br"));
+        }
+    });
+
     chatMessages.appendChild(bubble);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -243,42 +253,80 @@ function initWeatherDashboard() {
             .then(data => {
                 const card = document.getElementById(`weather-card-${city}`);
                 if (!card) return;
-                
-                let iconUrl = "";
-                if (data.icon) {
-                    iconUrl = `https://openweathermap.org/img/wn/${data.icon}@2x.png`;
+
+                // Build DOM safely to avoid XSS from server-returned strings
+                const outer = document.createElement("div");
+                outer.className = "glass-card p-4 h-100 d-flex flex-column justify-content-between";
+
+                const inner = document.createElement("div");
+
+                const header = document.createElement("div");
+                header.className = "d-flex justify-content-between align-items-center mb-3";
+
+                const cityEl = document.createElement("h3");
+                cityEl.className = "mb-0";
+                cityEl.textContent = data.city || city;
+                header.appendChild(cityEl);
+
+                if (data.icon && /^[a-zA-Z0-9]+$/.test(data.icon)) {
+                    const img = document.createElement("img");
+                    img.src = `https://openweathermap.org/img/wn/${data.icon}@2x.png`;
+                    img.width = 50;
+                    img.height = 50;
+                    img.alt = data.condition || "weather icon";
+                    header.appendChild(img);
                 }
-                
-                card.innerHTML = `
-                    <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between">
-                        <div>
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h3 class="mb-0">${data.city}</h3>
-                                ${iconUrl ? `<img src="${iconUrl}" width="50" height="50" alt="${data.condition}">` : ""}
-                            </div>
-                            <div class="weather-main-temp mb-2">${data.temperature}</div>
-                            <div class="mb-3 text-capitalize font-weight-bold" style="color: var(--secondary)">
-                                <i class="bi bi-wind"></i> ${data.description} | Humidity: ${data.humidity}
-                            </div>
-                            <p class="text-muted" style="font-size: 0.92rem;">
-                                ${data.recommendation}
-                            </p>
-                        </div>
-                        ${data.is_mock ? '<div class="badge bg-warning text-dark mt-3 py-2">Demo Seasonal Weather</div>' : ''}
-                    </div>
-                `;
+                inner.appendChild(header);
+
+                const tempEl = document.createElement("div");
+                tempEl.className = "weather-main-temp mb-2";
+                tempEl.textContent = data.temperature || "--";
+                inner.appendChild(tempEl);
+
+                const descEl = document.createElement("div");
+                descEl.className = "mb-3 text-capitalize font-weight-bold";
+                descEl.style.color = "var(--secondary)";
+                descEl.innerHTML = '<i class="bi bi-wind"></i> ';
+                descEl.appendChild(document.createTextNode(
+                    `${data.description || ""} | Humidity: ${data.humidity || "--"}`
+                ));
+                inner.appendChild(descEl);
+
+                const recEl = document.createElement("p");
+                recEl.className = "text-muted";
+                recEl.style.fontSize = "0.92rem";
+                recEl.textContent = data.recommendation || "";
+                inner.appendChild(recEl);
+
+                outer.appendChild(inner);
+
+                if (data.is_mock) {
+                    const badge = document.createElement("div");
+                    badge.className = "badge bg-warning text-dark mt-3 py-2";
+                    badge.textContent = "Demo Seasonal Weather";
+                    outer.appendChild(badge);
+                }
+
+                card.innerHTML = "";
+                card.appendChild(outer);
             })
             .catch(err => {
                 const card = document.getElementById(`weather-card-${city}`);
                 if (card) {
-                    card.innerHTML = `
-                        <div class="glass-card p-4">
-                            <h3 class="text-capitalize">${city}</h3>
-                            <p class="text-danger mt-3">Could not load weather info.</p>
-                        </div>
-                    `;
+                    const wrap = document.createElement("div");
+                    wrap.className = "glass-card p-4";
+                    const h = document.createElement("h3");
+                    h.className = "text-capitalize";
+                    h.textContent = city;
+                    const p = document.createElement("p");
+                    p.className = "text-danger mt-3";
+                    p.textContent = "Could not load weather info.";
+                    wrap.appendChild(h);
+                    wrap.appendChild(p);
+                    card.innerHTML = "";
+                    card.appendChild(wrap);
                 }
-                console.error(err);
+                console.error("Weather fetch error:", err);
             });
     });
 }
