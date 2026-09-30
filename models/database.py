@@ -64,6 +64,7 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+    seed_data()
 
 
 def _hash_password(password: str) -> str:
