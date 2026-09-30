@@ -120,6 +120,10 @@ from services.weather_service import get_weather_for_city  # noqa: E402
 from services.translate_service import translate_text  # noqa: E402
 from services.maps_service import get_map_embed_url, get_directions_url  # noqa: E402
 
+# Auto-initialize and seed DB on boot (syncs admin credentials from .env)
+init_db()
+seed_data()
+
 # ---------------------------------------------------------------------------
 # Emergency contacts (static — no user input involved)
 # ---------------------------------------------------------------------------

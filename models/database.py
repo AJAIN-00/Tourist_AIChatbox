@@ -375,13 +375,15 @@ def seed_data():
         else:
             print("Places table already seeded.")
 
-        # Seed default admin user with bcrypt hash
+        # Seed or sync default admin user with bcrypt hash
+        import os as _os
+        admin_username = _os.getenv("ADMIN_USERNAME") or _os.getenv("ADMIN_EMAIL") or "admin"
+        default_password = _os.getenv("ADMIN_DEFAULT_PASSWORD", "")
+
         cursor_admin = conn.execute("SELECT COUNT(*) FROM admin_users")
         admin_count = cursor_admin.fetchone()[0]
+
         if admin_count == 0:
-            import os as _os
-            # Use env-specified default password or a secure random one
-            default_password = _os.getenv("ADMIN_DEFAULT_PASSWORD", "")
             if not default_password:
                 import secrets as _sec
                 default_password = _sec.token_urlsafe(16)
@@ -393,11 +395,22 @@ def seed_data():
             pwd_hash = _hash_password(default_password)
             conn.execute(
                 "INSERT INTO admin_users (username, password_hash) VALUES (?, ?)",
-                ("admin", pwd_hash),
+                (admin_username, pwd_hash),
             )
-            print("Default admin account seeded.")
+            print(f"Default admin account ('{admin_username}') seeded.")
         else:
-            print("Admin account already exists.")
+            # If ADMIN_USERNAME / ADMIN_EMAIL or ADMIN_DEFAULT_PASSWORD was explicitly provided in .env, sync it
+            if default_password or _os.getenv("ADMIN_USERNAME") or _os.getenv("ADMIN_EMAIL"):
+                target_pwd = default_password if default_password else "Admin#SmartGuide2026!"
+                pwd_hash = _hash_password(target_pwd)
+                # Check if current admin exists
+                conn.execute(
+                    "UPDATE admin_users SET username = ?, password_hash = ? WHERE id = (SELECT id FROM admin_users ORDER BY id ASC LIMIT 1)",
+                    (admin_username, pwd_hash),
+                )
+                print(f"Admin account updated to username/email: '{admin_username}'")
+            else:
+                print("Admin account already exists.")
 
 
 def get_all_places(city=None):
