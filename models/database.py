@@ -67,6 +67,10 @@ def init_db():
     seed_data()
 
 
+# Pre-computed bcrypt hash for constant-time comparison on nonexistent usernames
+_DUMMY_BCRYPT_HASH = "$2b$12$A9tp.PC1mML9CD5Mx2LpceM6Il5dnTYwZUqv4xLpFqIgrz1qoohiW"
+
+
 def _hash_password(password: str) -> str:
     """
     Hash a password using bcrypt with a work factor of 12.
@@ -376,10 +380,11 @@ def seed_data():
         else:
             logger.debug("Places table already seeded.")
 
-        # Seed or sync default admin user with bcrypt hash
+        # Seed default admin user with bcrypt hash if not already present
         import os as _os
         admin_username = _os.getenv("ADMIN_USERNAME") or _os.getenv("ADMIN_EMAIL") or "admin"
         default_password = _os.getenv("ADMIN_DEFAULT_PASSWORD", "")
+        force_reset = _os.getenv("ADMIN_FORCE_PASSWORD_RESET", "").strip().lower() in ("true", "1", "yes")
 
         cursor_admin = conn.execute("SELECT COUNT(*) FROM admin_users")
         admin_count = cursor_admin.fetchone()[0]
@@ -387,10 +392,10 @@ def seed_data():
         if admin_count == 0:
             if not default_password:
                 import secrets as _sec
-                default_password = _sec.token_urlsafe(16)
+                default_password = _sec.token_urlsafe(20)
                 logger.warning(
-                    "No ADMIN_DEFAULT_PASSWORD set. Generated one-time password: %s. "
-                    "Store it securely and change it immediately via the admin panel.",
+                    "No ADMIN_DEFAULT_PASSWORD set. Generated one-time initial password: %s. "
+                    "Store it securely or change it via the admin panel.",
                     default_password,
                 )
             pwd_hash = _hash_password(default_password)
@@ -398,20 +403,24 @@ def seed_data():
                 "INSERT INTO admin_users (username, password_hash) VALUES (?, ?)",
                 (admin_username, pwd_hash),
             )
-            logger.info("Default admin account ('%s') seeded.", admin_username)
+            logger.info("Initial admin account ('%s') seeded.", admin_username)
+        elif force_reset and default_password:
+            # Explicit, deliberate password reset requested via deployment environment variable
+            pwd_hash = _hash_password(default_password)
+            conn.execute(
+                "UPDATE admin_users SET username = ?, password_hash = ? WHERE id = (SELECT id FROM admin_users ORDER BY id ASC LIMIT 1)",
+                (admin_username, pwd_hash),
+            )
+            logger.warning(
+                "ADMIN_FORCE_PASSWORD_RESET is enabled: Admin '%s' password was explicitly updated. "
+                "IMPORTANT: Remove or disable ADMIN_FORCE_PASSWORD_RESET in your deployment settings now.",
+                admin_username,
+            )
         else:
-            # If ADMIN_USERNAME / ADMIN_EMAIL or ADMIN_DEFAULT_PASSWORD was explicitly provided in .env, sync it
-            if default_password or _os.getenv("ADMIN_USERNAME") or _os.getenv("ADMIN_EMAIL"):
-                target_pwd = default_password if default_password else "Admin#SmartGuide2026!"
-                pwd_hash = _hash_password(target_pwd)
-                # Check if current admin exists
-                conn.execute(
-                    "UPDATE admin_users SET username = ?, password_hash = ? WHERE id = (SELECT id FROM admin_users ORDER BY id ASC LIMIT 1)",
-                    (admin_username, pwd_hash),
-                )
-                logger.info("Admin account updated to username/email: '%s'", admin_username)
-            else:
-                logger.debug("Admin account already exists.")
+            logger.debug(
+                "Admin account already exists (%d account(s) found). Existing credentials preserved.",
+                admin_count,
+            )
 
 
 def get_all_places(city=None):
@@ -457,10 +466,46 @@ def verify_admin(username: str, password: str) -> bool:
 
     if not row:
         # Perform a dummy check to avoid timing differences revealing valid usernames
-        _verify_password("dummy", _hash_password("dummy"))
+        _verify_password(password, _DUMMY_BCRYPT_HASH)
         return False
 
     return _verify_password(password, row["password_hash"])
+
+
+def update_admin_password(username: str, new_password: str) -> bool:
+    """
+    Update the password for an existing admin user by username or email.
+    Hashes the new password with bcrypt before storing.
+    Returns True if user found and updated, False otherwise.
+    """
+    if not username or not new_password:
+        return False
+    pwd_hash = _hash_password(new_password)
+    with get_db() as conn:
+        cursor = conn.execute(
+            "UPDATE admin_users SET password_hash = ? WHERE username = ?",
+            (pwd_hash, username),
+        )
+        return cursor.rowcount > 0
+
+
+def change_admin_password(username: str, current_password: str, new_password: str) -> tuple[bool, str]:
+    """
+    Securely verify current password and update to new password.
+    Enforces minimum length of 12 characters.
+    """
+    if not current_password or not new_password:
+        return False, "All password fields are required."
+    if not verify_admin(username, current_password):
+        return False, "Current password is incorrect."
+    if len(new_password) < 12:
+        return False, "New password must be at least 12 characters long."
+    if current_password == new_password:
+        return False, "New password cannot be the same as the current password."
+    success = update_admin_password(username, new_password)
+    if success:
+        return True, "Password updated successfully."
+    return False, "Failed to update password. User not found."
 
 
 def add_place(data):
@@ -529,3 +574,22 @@ def update_place(place_id, data):
 def delete_place(place_id):
     with get_db() as conn:
         conn.execute("DELETE FROM places WHERE id=?", (place_id,))
+
+
+if __name__ == "__main__":
+    import sys
+    # Allow explicit, secure password update via CLI without touching code
+    # Example: python -m models.database <username> <new_password>
+    if len(sys.argv) == 3:
+        target_user = sys.argv[1].strip()
+        new_pwd = sys.argv[2]
+        if len(new_pwd) < 12:
+            print("Error: Password must be at least 12 characters long.")
+            sys.exit(1)
+        if update_admin_password(target_user, new_pwd):
+            print(f"Password updated successfully for admin '{target_user}'.")
+        else:
+            print(f"Error: Admin user '{target_user}' not found in database.")
+            sys.exit(1)
+    else:
+        print("Usage: python -m models.database <username> <new_password>")

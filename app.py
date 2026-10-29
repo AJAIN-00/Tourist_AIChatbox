@@ -117,16 +117,13 @@ def save_uploaded_image(file) -> "str | None":
 # ---------------------------------------------------------------------------
 from models.database import (  # noqa: E402
     init_db, seed_data, get_all_places, get_place_by_id,
-    save_chat, verify_admin, add_place, update_place, delete_place,
+    save_chat, verify_admin, change_admin_password,
+    add_place, update_place, delete_place,
 )
 from services.gemini_service import chat_with_gemini, generate_itinerary_ai  # noqa: E402
 from services.weather_service import get_weather_for_city  # noqa: E402
 from services.translate_service import translate_text  # noqa: E402
 from services.maps_service import get_map_embed_url, get_directions_url  # noqa: E402
-
-# Auto-initialize and seed DB on boot (syncs admin credentials from .env)
-init_db()
-seed_data()
 
 # ---------------------------------------------------------------------------
 # Startup weak-password check (F-01)
@@ -173,7 +170,6 @@ EMERGENCY_CONTACTS = {
 # ---------------------------------------------------------------------------
 with app.app_context():
     init_db()
-    seed_data()
 
 # ---------------------------------------------------------------------------
 # Security headers — applied to every response
@@ -503,6 +499,36 @@ def admin_logout():
     session.clear()
     flash("You have logged out successfully.", "info")
     return redirect(url_for("admin_login"))
+
+
+@app.route("/admin/change-password", methods=["GET", "POST"])
+@login_required
+@limiter.limit("5 per minute")
+def admin_change_password():
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        username = session.get("username", "")
+
+        if not current_password or not new_password or not confirm_password:
+            flash("All password fields are required.", "danger")
+            return render_template("admin_change_password.html")
+
+        if new_password != confirm_password:
+            flash("New password and confirmation do not match.", "danger")
+            return render_template("admin_change_password.html")
+
+        success, msg = change_admin_password(username, current_password, new_password)
+        if success:
+            logger.info("Admin password changed successfully for '%s' from %s", username, get_remote_address())
+            flash("Password updated successfully!", "success")
+            return redirect(url_for("admin_dashboard"))
+        else:
+            logger.warning("Failed password change attempt for '%s' from %s: %s", username, get_remote_address(), msg)
+            flash(msg, "danger")
+
+    return render_template("admin_change_password.html")
 
 
 @app.route("/admin")

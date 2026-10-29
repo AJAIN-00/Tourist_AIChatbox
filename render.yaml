@@ -1,9 +1,10 @@
 services:
   - type: web
     name: tamilnadu-tourist-guide
-    env: python
+    runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -21,3 +22,9 @@ services:
         sync: false
       - key: LIBRETRANSLATE_KEY
         sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_DEFAULT_PASSWORD
+        sync: false
+      - key: ADMIN_FORCE_PASSWORD_RESET
+        value: "false"
