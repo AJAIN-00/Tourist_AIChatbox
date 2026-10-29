@@ -1,5 +1,8 @@
 import os
+import logging
 import requests
+
+logger = logging.getLogger(__name__)
 
 def translate_text(text, target_lang):
     """
@@ -12,8 +15,9 @@ def translate_text(text, target_lang):
 
     # Set up LibreTranslate endpoint
     # Defaulting to a public instance or env variable
-    url = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.de")
-    api_key = os.getenv("LIBRETRANSLATE_KEY", "")
+    raw_url = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.de").strip()
+    url = raw_url.rstrip("/") if raw_url else "https://libretranslate.de"
+    api_key = os.getenv("LIBRETRANSLATE_KEY", "").strip().strip('"\'')
     
     # Clean language code
     target_lang = target_lang.lower().strip()
@@ -25,7 +29,7 @@ def translate_text(text, target_lang):
             "target": target_lang,
             "format": "text"
         }
-        if api_key:
+        if api_key and api_key != "your_libretranslate_key_here":
             payload["api_key"] = api_key
             
         headers = { "Content-Type": "application/json" }
@@ -37,10 +41,11 @@ def translate_text(text, target_lang):
             result = response.json()
             return result.get("translatedText", text)
         else:
-            print(f"LibreTranslate returned status code {response.status_code}: {response.text}")
-            # Fallback to local translation notice
+            logger.warning(
+                "LibreTranslate returned status %d for lang=%s",
+                response.status_code, target_lang
+            )
             return f"{text}\n\n*(Translation to {target_lang.upper()} is temporarily unavailable. Displayed in English)*"
     except Exception as e:
-        print(f"LibreTranslate Error: {str(e)}")
-        # Fallback to returning original English text
+        logger.error("LibreTranslate connection failed: %s", str(e))
         return f"{text}\n\n*(Translation service connection failed. Displayed in English)*"

@@ -1,7 +1,9 @@
 import os
+import re
 import secrets
 import functools
 import logging
+from datetime import timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -40,13 +42,15 @@ if not _secret or _secret == "your-super-secret-key-change-this":
 app.secret_key = _secret
 
 # Session cookie hardening
+_is_production = os.getenv("FLASK_ENV") == "production"
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.getenv("FLASK_ENV") == "production",  # True in prod
-    WTF_CSRF_TIME_LIMIT=3600,          # CSRF tokens expire after 1 hour
-    WTF_CSRF_SSL_STRICT=False,         # Allow non-HTTPS in dev
-    MAX_CONTENT_LENGTH=8 * 1024 * 1024,  # 8 MB upload limit
+    SESSION_COOKIE_SECURE=_is_production,      # True in prod
+    WTF_CSRF_TIME_LIMIT=3600,                  # CSRF tokens expire after 1 hour
+    WTF_CSRF_SSL_STRICT=_is_production,        # Strict only in prod
+    MAX_CONTENT_LENGTH=8 * 1024 * 1024,        # 8 MB upload limit
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=4),  # Admin sessions expire after 4 h
 )
 
 # CSRF protection (all POST/PUT/DELETE/PATCH forms protected automatically)
@@ -125,6 +129,22 @@ init_db()
 seed_data()
 
 # ---------------------------------------------------------------------------
+# Startup weak-password check (F-01)
+# ---------------------------------------------------------------------------
+_admin_pwd = os.getenv("ADMIN_DEFAULT_PASSWORD", "")
+if _admin_pwd:
+    _looks_like_phone = bool(re.fullmatch(r"\d{8,15}", _admin_pwd))
+    _too_short = len(_admin_pwd) < 12
+    if _looks_like_phone or _too_short:
+        logger.critical(
+            "SECURITY WARNING: ADMIN_DEFAULT_PASSWORD appears to be a weak credential "
+            "(phone number or fewer than 12 characters). "
+            "Set a strong random password in your Render environment variables immediately. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(20))\""
+        )
+del _admin_pwd
+
+# ---------------------------------------------------------------------------
 # Emergency contacts (static — no user input involved)
 # ---------------------------------------------------------------------------
 EMERGENCY_CONTACTS = {
@@ -180,6 +200,11 @@ def set_security_headers(response):
     response.headers["Permissions-Policy"] = (
         "geolocation=(), camera=(), microphone=(self), payment=()"
     )
+    # HSTS — only in production to avoid breaking local dev (F-10)
+    if _is_production:
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
     # Remove server fingerprinting
     response.headers.pop("Server", None)
     # Authenticated / sensitive responses: no caching

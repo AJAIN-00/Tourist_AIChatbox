@@ -1,5 +1,8 @@
 import os
+import logging
 import requests
+
+logger = logging.getLogger(__name__)
 
 CITY_COORDINATES = {
     "chennai": {"lat": 13.0827, "lon": 80.2707},
@@ -14,9 +17,9 @@ def get_weather_for_city(city_name):
     if not coords:
         return {"error": "City weather coordinates not found."}
         
-    api_key = os.getenv("OPENWEATHERMAP_API_KEY")
-    if not api_key:
-        return get_mock_weather(city_name)
+    api_key = os.getenv("OPENWEATHERMAP_API_KEY", "").strip().strip('"\'')
+    if not api_key or api_key == "your_openweathermap_api_key_here":
+        return get_mock_weather(city_name, is_fallback=False)
         
     try:
         lat = coords["lat"]
@@ -46,7 +49,7 @@ def get_weather_for_city(city_name):
             "is_mock": False
         }
     except Exception as e:
-        print(f"Weather API Error: {str(e)}")
+        logger.warning("Weather API error for %s: %s", city_name, str(e))
         return get_mock_weather(city_name, is_fallback=True)
 
 def get_travel_recommendation(temp, condition):
@@ -102,5 +105,7 @@ def get_mock_weather(city_name, is_fallback=False):
     data["city"] = city_name.title()
     data["is_mock"] = True
     if is_fallback:
-        data["note"] = "API request failed; showing seasonal fallback data."
+        data["note"] = "Live weather API unavailable; displaying seasonal fallback."
+    else:
+        data["note"] = "Demo seasonal weather (API key not configured)."
     return data

@@ -49,4 +49,6 @@ instance/
 
 # Security scanning output
 bandit-report.*
+bandit_report.*
 pip-audit-report.*
+pip_audit_report.*
