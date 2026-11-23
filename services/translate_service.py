@@ -38,8 +38,14 @@ def translate_text(text, target_lang):
         response = requests.post(f"{url}/translate", json=payload, headers=headers, timeout=5)
         
         if response.status_code == 200:
-            result = response.json()
-            return result.get("translatedText", text)
+            try:
+                result = response.json()
+                return result.get("translatedText", text)
+            except Exception:
+                logger.warning(
+                    "LibreTranslate returned non-JSON response for lang=%s", target_lang
+                )
+                return f"{text}\n\n*(Translation to {target_lang.upper()} is temporarily unavailable. Displayed in English)*"
         else:
             logger.warning(
                 "LibreTranslate returned status %d for lang=%s",

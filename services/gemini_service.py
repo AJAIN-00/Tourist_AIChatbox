@@ -25,9 +25,23 @@ MODELS_TO_TRY = [
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+# In-memory store for multi-turn chat sessions (session_id -> list of message dicts)
+_conversations = {}
+MAX_SESSIONS = 1000
+MAX_HISTORY_PER_SESSION = 10
+
+
+def clear_conversations(session_id=None):
+    """Clear conversation history for a session or all sessions."""
+    if session_id:
+        _conversations.pop(session_id, None)
+    else:
+        _conversations.clear()
+
 
 def call_groq_api(api_key, model, message, system_instruction=None, retries=3):
-    """Call Groq REST API (OpenAI-compatible) to get a chat response."""
+    """Call Groq REST API (OpenAI-compatible) to get a chat response.
+    Supports either a single string message or a list of message dicts."""
     clean_key = str(api_key or "").strip().strip('"\'')
     if not clean_key or clean_key == "your_groq_api_key_here":
         raise ValueError("GROQ_API_KEY is not configured or is a placeholder.")
@@ -40,7 +54,10 @@ def call_groq_api(api_key, model, message, system_instruction=None, retries=3):
     messages = []
     if system_instruction:
         messages.append({"role": "system", "content": system_instruction})
-    messages.append({"role": "user", "content": message})
+    if isinstance(message, list):
+        messages.extend(message)
+    else:
+        messages.append({"role": "user", "content": str(message)})
 
     body = {
         "model": model,
@@ -126,6 +143,7 @@ def call_groq_api(api_key, model, message, system_instruction=None, retries=3):
 
 def chat_with_gemini(message, session_id=None):
     """Send a chat message to Groq AI and return the response.
+    Retains multi-turn conversation history per session_id.
     Function name kept as chat_with_gemini for backward compatibility."""
     api_key = os.getenv("GROQ_API_KEY", "").strip().strip('"\'')
 
@@ -133,12 +151,28 @@ def chat_with_gemini(message, session_id=None):
         logger.warning("[Groq] GROQ_API_KEY not configured.")
         return get_no_key_response()
 
+    if session_id:
+        if len(_conversations) > MAX_SESSIONS:
+            oldest_key = next(iter(_conversations))
+            _conversations.pop(oldest_key, None)
+        history = _conversations.setdefault(session_id, [])
+        message_payload = list(history)
+        message_payload.append({"role": "user", "content": message})
+    else:
+        message_payload = message
+
     last_error = None
     for model in MODELS_TO_TRY:
         try:
             logger.info("[Groq] Trying model: %s", model)
-            result = call_groq_api(api_key, model, message, SYSTEM_INSTRUCTION)
+            result = call_groq_api(api_key, model, message_payload, SYSTEM_INSTRUCTION)
             logger.info("[Groq] Success with model: %s", model)
+            if session_id:
+                history = _conversations.setdefault(session_id, [])
+                history.append({"role": "user", "content": message})
+                history.append({"role": "assistant", "content": result})
+                if len(history) > MAX_HISTORY_PER_SESSION:
+                    history[:] = history[-MAX_HISTORY_PER_SESSION:]
             return result
         except Exception as e:
             err_str = str(e)

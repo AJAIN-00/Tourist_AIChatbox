@@ -345,6 +345,44 @@ class TestFlaskRoutesAndSecurity(unittest.TestCase):
         res = self.client.post("/chat", json={"message": ""})
         self.assertEqual(res.status_code, 400)
 
+    @patch.dict(os.environ, {"GROQ_API_KEY": "valid_mock_key"})
+    @patch("services.gemini_service.call_groq_api")
+    def test_chat_multiturn_conversation_history_retained(self, mock_call):
+        """Multi-turn requests maintain session conversation history."""
+        from services.gemini_service import clear_conversations
+        clear_conversations("test_session_123")
+        mock_call.side_effect = ["Hello! How can I help?", "Marina Beach is great!"]
+
+        # First turn
+        resp1 = chat_with_gemini("Hi there", session_id="test_session_123")
+        self.assertEqual(resp1, "Hello! How can I help?")
+        args1, _ = mock_call.call_args
+        self.assertEqual(args1[2], [{"role": "user", "content": "Hi there"}])
+
+        # Second turn (should include prior turn in payload)
+        resp2 = chat_with_gemini("Tell me about beaches", session_id="test_session_123")
+        self.assertEqual(resp2, "Marina Beach is great!")
+        args2, _ = mock_call.call_args
+        expected_history = [
+            {"role": "user", "content": "Hi there"},
+            {"role": "assistant", "content": "Hello! How can I help?"},
+            {"role": "user", "content": "Tell me about beaches"},
+        ]
+        self.assertEqual(args2[2], expected_history)
+        clear_conversations("test_session_123")
+
+    @patch("services.translate_service.requests.post")
+    def test_translate_non_json_response_graceful_fallback(self, mock_post):
+        """When translation service returns HTML/non-JSON with 200, it falls back cleanly."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.side_effect = ValueError("No JSON object could be decoded")
+        mock_post.return_value = mock_resp
+
+        output = translate_text("Sample text", "ta")
+        self.assertIn("Sample text", output)
+        self.assertIn("temporarily unavailable", output)
+
 
 if __name__ == "__main__":
     unittest.main()
