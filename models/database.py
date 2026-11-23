@@ -382,8 +382,16 @@ def seed_data():
 
         # Seed default admin user with bcrypt hash if not already present
         import os as _os
-        admin_username = _os.getenv("ADMIN_USERNAME") or _os.getenv("ADMIN_EMAIL") or "admin"
-        default_password = _os.getenv("ADMIN_DEFAULT_PASSWORD", "")
+        admin_username = (
+            _os.getenv("ADMIN_USERNAME")
+            or _os.getenv("ADMIN_EMAIL")
+            or "admin"
+        ).strip().strip('"\'')
+        default_password = (
+            _os.getenv("ADMIN_DEFAULT_PASSWORD")
+            or _os.getenv("ADMIN_PASSWORD")
+            or ""
+        ).strip().strip('"\'')
         force_reset = _os.getenv("ADMIN_FORCE_PASSWORD_RESET", "").strip().lower() in ("true", "1", "yes")
 
         cursor_admin = conn.execute("SELECT COUNT(*) FROM admin_users")
@@ -394,9 +402,8 @@ def seed_data():
                 import secrets as _sec
                 default_password = _sec.token_urlsafe(20)
                 logger.warning(
-                    "No ADMIN_DEFAULT_PASSWORD set. Generated one-time initial password: %s. "
-                    "Store it securely or change it via the admin panel.",
-                    default_password,
+                    "No ADMIN_DEFAULT_PASSWORD configured in environment. A random initial password was generated. "
+                    "Configure ADMIN_DEFAULT_PASSWORD in your deployment settings to set a persistent, known admin password."
                 )
             pwd_hash = _hash_password(default_password)
             conn.execute(

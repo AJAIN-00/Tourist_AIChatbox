@@ -255,20 +255,26 @@ class TestAdminAuthentication(unittest.TestCase):
         )
 
     def test_initial_admin_creation_generates_random_password_when_empty(self):
-        """When admin_users is empty and no password is set, generates a random password, not hardcoded."""
+        """When admin_users is empty and no password is set, generates a random password, not hardcoded.
+        Also asserts that the generated password is NOT printed or leaked into application logs."""
         with db_module.get_db() as conn:
             conn.execute("DELETE FROM admin_users")
 
-        with patch.dict(os.environ, {
-            "ADMIN_EMAIL": "random_admin@example.com",
-            "ADMIN_DEFAULT_PASSWORD": ""
-        }):
-            db_module.seed_data()
+        with self.assertLogs("models.database", level="WARNING") as log_ctx:
+            with patch.dict(os.environ, {
+                "ADMIN_EMAIL": "random_admin@example.com",
+                "ADMIN_DEFAULT_PASSWORD": ""
+            }):
+                db_module.seed_data()
 
         # Must NOT be the old hardcoded default "Admin#SmartGuide2026!"
         self.assertFalse(
             db_module.verify_admin("random_admin@example.com", "Admin#SmartGuide2026!")
         )
+        # Ensure log message warned about missing password WITHOUT printing the password
+        log_output = "\n".join(log_ctx.output)
+        self.assertIn("No ADMIN_DEFAULT_PASSWORD configured", log_output)
+        self.assertNotIn("Generated one-time initial password:", log_output)
 
     def test_restart_does_not_overwrite_existing_admin_password(self):
         """Subsequent restarts/seed_data calls MUST NOT overwrite existing admin credentials."""
